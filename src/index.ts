@@ -30,10 +30,6 @@ const getSingleWork = db.prepare(`
 SELECT * FROM works WHERE id= @id;
 `)
 
-const getSingleMuseum = db.prepare(`
-SELECT * FROM museums WHERE id=@id;
-`)
-
 const getWorksForMuseum = db.prepare(`
 SELECT * FROM works WHERE museumId= @museumId;
 `)
@@ -44,6 +40,10 @@ SELECT * FROM museums WHERE id= @id;
 
 const createAMuseum = db.prepare(`
 INSERT INTO museums(name, city) VALUES(@name, @city);
+`)
+
+const createAWork =db.prepare(`
+INSERT INTO works(name, picture, museumId) VALUES(@name, @picture, @museumId);
 `)
 
 
@@ -68,7 +68,7 @@ app.get('/works', (req, res) => {
 })
 
 app.get('/museums/:id', (req, res) => {
-    const museum = getSingleMuseum.get(req.params)
+    const museum = getMuseumForWorks.get(req.params)
 
     if (museum) {
         const works = getWorksForMuseum.all({ museumId: museum.id })
@@ -107,7 +107,7 @@ app.post('/museums', (req, res) => {
 
    if(errors.length===0){
     const newMuseum = createAMuseum.run(req.body)
-    const museum = getSingleMuseum.get({ id: newMuseum.lastInsertRowid })
+    const museum = getMuseumForWorks.get({ id: newMuseum.lastInsertRowid })
     res.send(museum)
    }
 
@@ -117,5 +117,39 @@ app.post('/museums', (req, res) => {
   
 })
 
+app.post('/works', (req, res)=>{
+    const errors: string[]=[]
+    const name=req.body.name;
+    const picture=req.body.picture;
+    const museumId=Number(req.body.museumId)
+
+    if(typeof name !== "string"){
+        errors.push("Please enter a valid name!")
+    }
+    if(typeof picture!== "string"){
+        errors.push("Please enter a picture address!")
+    }
+
+    if(typeof museumId !=="number"){
+        errors.push("Please enter a valid museum ID!")
+    }
+
+    if(errors.length===0){
+        const museum=getMuseumForWorks.get({id: museumId})
+        if(museum){
+            const newWork=createAWork.run(req.body)
+            const work=getSingleWork.get({id:newWork.lastInsertRowid})
+            res.send(work)
+        }
+       else{
+        res.status(404).send({error: "No matching museums for this work"})
+       }
+    }
+
+    else{
+        res.status(400).send({errors})
+    }
+
+})
 
 app.listen(port)
