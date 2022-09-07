@@ -30,6 +30,10 @@ const getSingleWork = db.prepare(`
 SELECT * FROM works WHERE id= @id;
 `)
 
+const getSingleMuseum=db.prepare(`
+SELECT * FROM museums WHERE id=@id;
+`)
+
 const getWorksForMuseum = db.prepare(`
 SELECT * FROM works WHERE museumId= @museumId;
 `)
@@ -57,5 +61,32 @@ app.get('/works', (req, res) => {
     }
     res.send(works)
 })
+
+app.get('/museums/:id', (req, res)=>{
+    const museum=getSingleMuseum.get(req.params)
+
+    if(museum){
+        const works=getWorksForMuseum.all({museumId: museum.id })
+        museum.works=works
+      res.send(museum)
+    }
+    else {
+        res.status(404).send({ error: 'Museum not found.' })
+      }
+ 
+})
+
+app.get('/works/:id', (req, res)=>{
+    const work=getSingleWork.get(req.params)
+    if(work){
+        let museum=getMuseumForWorks.get({id: work.museumId})
+        work.museum=museum
+        res.send(work)
+    }
+    else{
+        res.status(404).send({error: "Work not found!"})
+    }
+})
+
 
 app.listen(port)
